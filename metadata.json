@@ -1,0 +1,6 @@
+{
+  "name": "ApexCompound - 100-Day Trading Challenge & Journal",
+  "description": "Professional compounding trading journal to scale from $10 (KES 1,300) with daily targets, discipline lock, multi-currency KSH/USD toggle, and performance analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
