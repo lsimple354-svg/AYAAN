@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calculator, 
   Smartphone, 
@@ -27,10 +27,22 @@ export const PositionSizerCalculator: React.FC<PositionSizerCalculatorProps> = (
   currentBalanceUsd,
 }) => {
   const [balance, setBalance] = useState<number>(currentBalanceUsd || 10);
-  const [riskPercent, setRiskPercent] = useState<number>(5);
+  const [riskPercent, setRiskPercent] = useState<number>(currentBalanceUsd >= 5000 ? 1 : 5);
   const [stopLossPips, setStopLossPips] = useState<number>(20);
   const [assetType, setAssetType] = useState<'us100' | 'us30' | 'xauusd' | 'forex'>('us100');
   const [rewardRatio, setRewardRatio] = useState<number>(2.5);
+
+  // Sync balance when platform or active account switches
+  useEffect(() => {
+    if (currentBalanceUsd && currentBalanceUsd > 0) {
+      setBalance(currentBalanceUsd);
+      if (currentBalanceUsd >= 5000) {
+        setRiskPercent(1); // Standard 1% prop firm risk
+      } else {
+        setRiskPercent(5); // $10 micro-account risk
+      }
+    }
+  }, [currentBalanceUsd]);
 
   // Calculations
   const maxRiskAmountUsd = (balance * riskPercent) / 100;
@@ -90,11 +102,51 @@ export const PositionSizerCalculator: React.FC<PositionSizerCalculatorProps> = (
             <span>Position Parameters</span>
           </h4>
 
-          {/* Account Balance */}
+          {/* Account Balance & Platform Preset Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Account Equity / Balance
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-semibold text-slate-300">
+                Account Equity / Balance
+              </label>
+              <span className="text-[10px] text-slate-400 font-mono">1-Tap Platform Presets:</span>
+            </div>
+
+            {/* Platform Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBalance(currentBalanceUsd || 10);
+                  setRiskPercent(5);
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  balance <= 500
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                    : 'bg-slate-950 text-emerald-400 border border-emerald-500/30 hover:bg-slate-800'
+                }`}
+              >
+                🌱 $10 Seed
+              </button>
+
+              {[5000, 10000, 25000, 50000, 100000].map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={() => {
+                    setBalance(sz);
+                    setRiskPercent(1); // Standard 1% prop firm risk limit
+                  }}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer ${
+                    balance === sz
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-950 text-cyan-400 border border-cyan-500/30 hover:bg-slate-800'
+                  }`}
+                >
+                  🛡️ ${sz / 1000}K Prop
+                </button>
+              ))}
+            </div>
+
             <div className="relative">
               <input
                 type="number"

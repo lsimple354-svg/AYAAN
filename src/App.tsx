@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, AppTab } from './components/Navbar';
 import { LiveMarketTicker } from './components/LiveMarketTicker';
+import { PropFirmDashboard } from './components/PropFirmDashboard';
 import { CompoundingCurveCalendar } from './components/CompoundingCurveCalendar';
 import { TradingAcademy } from './components/TradingAcademy';
 import { PositionSizerCalculator } from './components/PositionSizerCalculator';
@@ -16,12 +17,17 @@ import { TradeModal } from './components/TradeModal';
 import { DisciplineLockModal } from './components/DisciplineLockModal';
 import { SettingsModal } from './components/SettingsModal';
 import { TradingRulesModal } from './components/TradingRulesModal';
+import { EconomicCalendar } from './components/EconomicCalendar';
+import { StatementImporterModal } from './components/StatementImporterModal';
+import { PreSessionChecklistModal } from './components/PreSessionChecklistModal';
 import { 
   Currency, 
   CompoundingPreset, 
   DayRecord, 
   Trade, 
-  AppSettings 
+  AppSettings,
+  PropFirmSettings,
+  AccountMode
 } from './types/trading';
 import { 
   loadSettings, 
@@ -39,6 +45,7 @@ import {
   formatCurrency
 } from './utils/compounding';
 import { soundManager } from './utils/audio';
+import { ShieldCheck, TrendingUp, ArrowLeftRight, X, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [currency, setCurrency] = useState<Currency>('USD');
@@ -46,7 +53,22 @@ export default function App() {
   const [trades, setTrades] = useState<Trade[]>(loadTrades);
   const [days, setDays] = useState<DayRecord[]>(() => loadDays(settings, trades));
   
-  const [activeTab, setActiveTab] = useState<AppTab>('roadmap');
+  const [activeTab, setActiveTab] = useState<AppTab>(
+    settings.propFirm.accountMode === 'funded' ? 'funded' : 'roadmap'
+  );
+
+  // Toast notification on platform switch
+  const [switchToast, setSwitchToast] = useState<{ message: string; sub: string; mode: AccountMode } | null>(null);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (switchToast) {
+      const timer = setTimeout(() => {
+        setSwitchToast(null);
+      }, 3800);
+      return () => clearTimeout(timer);
+    }
+  }, [switchToast]);
   
   // Modals
   const [isTradeModalOpen, setIsTradeModalOpen] = useState(false);
@@ -56,6 +78,8 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isDisciplineModalOpen, setIsDisciplineModalOpen] = useState(false);
+  const [isStatementImporterOpen, setIsStatementImporterOpen] = useState(false);
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
 
   // Sync settings sound preference
   useEffect(() => {
@@ -77,6 +101,69 @@ export default function App() {
   // Currency Toggle
   const handleCurrencyToggle = (newCurr: Currency) => {
     setCurrency(newCurr);
+  };
+
+  // Toggle Account Mode between Funded Account and Compounding Challenge
+  const handleToggleAccountMode = () => {
+    soundManager.playClick();
+    const newMode: AccountMode = settings.propFirm.accountMode === 'funded' ? 'compounding' : 'funded';
+    const updatedProp: PropFirmSettings = { ...settings.propFirm, accountMode: newMode };
+    const updatedSettings = { ...settings, propFirm: updatedProp };
+    setSettings(updatedSettings);
+    saveSettings(updatedSettings);
+
+    if (newMode === 'funded') {
+      setActiveTab('funded');
+      setSwitchToast({
+        message: '🛡️ Switched to PropFirms Platform',
+        sub: `${updatedProp.propFirm} $${updatedProp.accountSize >= 1000 ? `${updatedProp.accountSize / 1000}K` : updatedProp.accountSize} • 5% Max Daily Loss Guard`,
+        mode: 'funded'
+      });
+    } else {
+      setActiveTab('roadmap');
+      setSwitchToast({
+        message: '🌱 Switched to Daily Compounding Platform',
+        sub: `100-Day $10 (KES 1,300) Seed Challenge • Day ${settings.activeDay}/100`,
+        mode: 'compounding'
+      });
+    }
+  };
+
+  // Synchronize Tab & Platform Mode
+  const handleTabChange = (tab: AppTab) => {
+    soundManager.playClick();
+    setActiveTab(tab);
+
+    // Auto-sync platform mode when clicking primary suite tabs
+    if (tab === 'funded' && settings.propFirm.accountMode !== 'funded') {
+      const updatedProp: PropFirmSettings = { ...settings.propFirm, accountMode: 'funded' };
+      const updatedSettings = { ...settings, propFirm: updatedProp };
+      setSettings(updatedSettings);
+      saveSettings(updatedSettings);
+      setSwitchToast({
+        message: '🛡️ Switched to PropFirms Platform',
+        sub: `${updatedProp.propFirm} $${updatedProp.accountSize >= 1000 ? `${updatedProp.accountSize / 1000}K` : updatedProp.accountSize} Trading Desk`,
+        mode: 'funded'
+      });
+    } else if ((tab === 'roadmap' || tab === 'calendar') && settings.propFirm.accountMode !== 'compounding') {
+      const updatedProp: PropFirmSettings = { ...settings.propFirm, accountMode: 'compounding' };
+      const updatedSettings = { ...settings, propFirm: updatedProp };
+      setSettings(updatedSettings);
+      saveSettings(updatedSettings);
+      setSwitchToast({
+        message: '🌱 Switched to Daily Compounding Platform',
+        sub: `100-Day $10 Seed Challenge • Day ${settings.activeDay}`,
+        mode: 'compounding'
+      });
+    }
+  };
+
+  // Update Prop Firm parameters
+  const handleUpdatePropSettings = (newProp: PropFirmSettings) => {
+    soundManager.playClick();
+    const updated = { ...settings, propFirm: newProp };
+    setSettings(updated);
+    saveSettings(updated);
   };
 
   // Sound Toggle
@@ -164,6 +251,13 @@ export default function App() {
         }, 300);
       }
     }
+  };
+
+  const handleImportStatementTrades = (newTrades: Trade[]) => {
+    soundManager.playTargetHit();
+    const combined = [...newTrades, ...trades];
+    setTrades(combined);
+    saveTrades(combined);
   };
 
   // Lock / Unlock Day
@@ -313,31 +407,157 @@ export default function App() {
         activeDayRecord={activeDayRecord}
         currentBalanceUsd={stats.currentBalanceUsd}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         onOpenTradeModal={() => handleOpenTradeModal(settings.activeDay)}
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         onOpenRulesModal={() => setIsRulesModalOpen(true)}
         onToggleSound={handleToggleSound}
         onOpenDisciplineVault={() => setIsDisciplineModalOpen(true)}
+        onToggleAccountMode={handleToggleAccountMode}
+        onOpenChecklistModal={() => setIsChecklistModalOpen(true)}
+        onOpenStatementImporter={() => setIsStatementImporterOpen(true)}
       />
+
+      {/* Mode Switch Floating Notification Toast */}
+      {switchToast && (
+        <div className="fixed top-20 right-4 sm:right-6 z-50 transition-all transform animate-in fade-in slide-in-from-top duration-300">
+          <div className={`flex items-start gap-3 p-4 rounded-2xl border shadow-2xl backdrop-blur-xl ${
+            switchToast.mode === 'funded'
+              ? 'bg-[#090e1a]/95 border-cyan-500/60 text-cyan-200 shadow-cyan-500/20'
+              : 'bg-[#07120e]/95 border-emerald-500/60 text-emerald-200 shadow-emerald-500/20'
+          }`}>
+            <div className={`p-2 rounded-xl shrink-0 ${
+              switchToast.mode === 'funded' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-emerald-500/20 text-emerald-400'
+            }`}>
+              {switchToast.mode === 'funded' ? <ShieldCheck className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
+            </div>
+            <div className="pr-2">
+              <h4 className="text-sm font-extrabold text-white">
+                {switchToast.message}
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5 font-mono">
+                {switchToast.sub}
+              </p>
+            </div>
+            <button
+              onClick={() => setSwitchToast(null)}
+              className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main App Content Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         
-        {/* Hero Banner with Trading Terminal Aesthetics */}
-        <HeroBanner
-          currency={currency}
-          settings={settings}
-          activeDayRecord={activeDayRecord}
-          stats={stats}
-          onOpenTradeModal={() => handleOpenTradeModal(settings.activeDay)}
-          onLockActiveDay={() => handleLockDay(settings.activeDay)}
-          onUnlockActiveDay={() => handleUnlockDay(settings.activeDay)}
-          onAdvanceDay={handleAdvanceDay}
-        />
+        {/* Interactive Platform Switcher Strip (1-Tap Switcher between PropFirms and Compounding) */}
+        <div className={`mb-6 p-4 sm:p-5 rounded-3xl border transition-all ${
+          settings.propFirm.accountMode === 'funded'
+            ? 'bg-gradient-to-r from-cyan-950/60 via-slate-900/95 to-blue-950/50 border-cyan-500/40 shadow-xl shadow-cyan-500/5'
+            : 'bg-gradient-to-r from-emerald-950/60 via-slate-900/95 to-teal-950/50 border-emerald-500/40 shadow-xl shadow-emerald-500/5'
+        }`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-md ${
+                settings.propFirm.accountMode === 'funded'
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              }`}>
+                {settings.propFirm.accountMode === 'funded' ? (
+                  <ShieldCheck className="w-6 h-6 text-cyan-400" />
+                ) : (
+                  <TrendingUp className="w-6 h-6 text-emerald-400" />
+                )}
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Current Platform:</span>
+                  <span className={`text-base font-black ${settings.propFirm.accountMode === 'funded' ? 'text-cyan-300' : 'text-emerald-300'}`}>
+                    {settings.propFirm.accountMode === 'funded' 
+                      ? `🛡️ PropFirms Suite (${settings.propFirm.propFirm} $${settings.propFirm.accountSize >= 1000 ? `${settings.propFirm.accountSize / 1000}K` : settings.propFirm.accountSize})`
+                      : '🌱 100-Day Compounding Challenge ($10 Seed)'
+                    }
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    settings.propFirm.accountMode === 'funded' 
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 animate-pulse' 
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
+                  }`}>
+                    ACTIVE WORKSPACE
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 max-w-2xl">
+                  {settings.propFirm.accountMode === 'funded'
+                    ? `Protecting your funded account with automated 5% Daily Loss limit ($${((settings.propFirm.accountSize * settings.propFirm.maxDailyLossPercent)/100).toLocaleString()}) & 10% Max Drawdown rules.`
+                    : `Scaling starting $10 (KES 1,300) capital mathematically day-by-day with daily target locks and discipline vault.`
+                  }
+                </p>
+              </div>
+            </div>
 
-        {/* Tab: 100-Day Compounding Roadmap Table */}
-        {activeTab === 'roadmap' && (
+            {/* The 1-Press Switch Platform Button */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleToggleAccountMode}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black transition-all cursor-pointer shadow-lg hover:scale-[1.02] active:scale-95 ${
+                  settings.propFirm.accountMode === 'funded'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-500/25 border border-emerald-400/40'
+                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/25 border border-cyan-400/40'
+                }`}
+                title="Switch between PropFirms and Daily Compounding platform"
+              >
+                <ArrowLeftRight className="w-4 h-4 stroke-[2.5]" />
+                <span>
+                  Switch to {settings.propFirm.accountMode === 'funded' ? '🌱 Daily Compounding ($10 Seed)' : '🛡️ PropFirms Platform ($5K - $200K)'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Banner with Trading Terminal Aesthetics (shown ONLY in Daily Compounding platform, never in PropFirms mode) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab !== 'news' && (
+          <HeroBanner
+            currency={currency}
+            settings={settings}
+            activeDayRecord={activeDayRecord}
+            stats={stats}
+            onOpenTradeModal={() => handleOpenTradeModal(settings.activeDay)}
+            onLockActiveDay={() => handleLockDay(settings.activeDay)}
+            onUnlockActiveDay={() => handleUnlockDay(settings.activeDay)}
+            onAdvanceDay={handleAdvanceDay}
+            onToggleAccountMode={handleToggleAccountMode}
+          />
+        )}
+
+        {/* Tab: Funded Account & Prop Firm Trading Desk (ONLY visible in PropFirms mode) */}
+        {settings.propFirm.accountMode === 'funded' && activeTab === 'funded' && (
+          <PropFirmDashboard
+            settings={settings}
+            currency={currency}
+            stats={stats}
+            trades={trades}
+            activeDayRecord={activeDayRecord}
+            onUpdatePropSettings={handleUpdatePropSettings}
+            onOpenTradeModal={() => handleOpenTradeModal(settings.activeDay)}
+            onLockSession={() => handleLockDay(settings.activeDay)}
+            onToggleAccountMode={handleToggleAccountMode}
+          />
+        )}
+
+        {/* Tab: Economic News Calendar & High Impact Filter (Available on both platforms) */}
+        {activeTab === 'news' && (
+          <EconomicCalendar
+            currency={currency}
+            usdToKesRate={settings.usdToKesRate}
+          />
+        )}
+
+        {/* Tab: 100-Day Compounding Roadmap Table (ONLY visible in Compounding mode) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab === 'roadmap' && (
           <CompoundingRoadmap
             days={days}
             trades={trades}
@@ -356,8 +576,8 @@ export default function App() {
           />
         )}
 
-        {/* Tab: Ayaan Trading Curve & Calendar Matrix */}
-        {activeTab === 'calendar' && (
+        {/* Tab: Ayaan Trading Curve & Calendar Matrix (ONLY visible in Compounding mode) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab === 'calendar' && (
           <CompoundingCurveCalendar
             days={days}
             trades={trades}
@@ -379,12 +599,12 @@ export default function App() {
           />
         )}
 
-        {/* Tab: Position Sizer & M-Pesa Risk Calculator */}
+        {/* Tab: Position Sizer & Risk Calculator (Tailored to active platform balance) */}
         {activeTab === 'sizer' && (
           <PositionSizerCalculator
             currency={currency}
             usdToKesRate={settings.usdToKesRate}
-            currentBalanceUsd={stats.currentBalanceUsd}
+            currentBalanceUsd={settings.propFirm.accountMode === 'funded' ? settings.propFirm.accountSize : stats.currentBalanceUsd}
           />
         )}
 
@@ -397,11 +617,12 @@ export default function App() {
             onOpenTradeModal={handleOpenTradeModal}
             onEditTrade={handleEditTrade}
             onDeleteTrade={handleDeleteTrade}
+            onOpenStatementImporter={() => setIsStatementImporterOpen(true)}
           />
         )}
 
-        {/* Tab 4: Discipline Vault & Lock Center */}
-        {activeTab === 'discipline' && (
+        {/* Tab: Discipline Vault & Lock Center (Compounding Mode) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab === 'discipline' && (
           <div className="py-6">
             <div className="max-w-3xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-amber-500/30 shadow-2xl space-y-6">
               <div className="text-center space-y-2">
@@ -540,6 +761,26 @@ export default function App() {
         isOpen={isRulesModalOpen}
         onClose={() => setIsRulesModalOpen(false)}
         currency={currency}
+      />
+
+      {/* MT4 / MT5 Statement Importer Modal */}
+      <StatementImporterModal
+        isOpen={isStatementImporterOpen}
+        onClose={() => setIsStatementImporterOpen(false)}
+        onImportTrades={handleImportStatementTrades}
+        settings={settings}
+        currency={currency}
+      />
+
+      {/* Pre-Session 6-Point Execution Audit Modal */}
+      <PreSessionChecklistModal
+        isOpen={isChecklistModalOpen}
+        onClose={() => setIsChecklistModalOpen(false)}
+        sessionName={
+          settings.propFirm.accountMode === 'funded'
+            ? `${settings.propFirm.propFirm} $${settings.propFirm.accountSize >= 1000 ? `${settings.propFirm.accountSize / 1000}K` : settings.propFirm.accountSize} Session`
+            : `Day ${settings.activeDay} Compounding Session`
+        }
       />
 
     </div>

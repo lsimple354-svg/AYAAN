@@ -29,7 +29,7 @@ export function getPresetPercentage(preset: CompoundingPreset, day: number): num
 // Generate the 100 days plan
 export function generateInitialDays(
   initialBalance: number = DEFAULT_INITIAL_USD,
-  preset: CompoundingPreset = 'stepped',
+  preset: CompoundingPreset = 'steady15',
   existingDays?: DayRecord[]
 ): DayRecord[] {
   const days: DayRecord[] = [];
@@ -37,10 +37,13 @@ export function generateInitialDays(
 
   for (let day = 1; day <= 100; day++) {
     const existing = existingDays?.find(d => d.dayNumber === day);
-    const targetPercent = existing ? existing.targetPercent : getPresetPercentage(preset, day);
+    // If an existing day is locked, retain its historical target; otherwise apply the selected preset
+    const targetPercent = (existing && existing.isLocked) 
+      ? existing.targetPercent 
+      : getPresetPercentage(preset, day);
     
-    const targetProfitUsd = (projectedRunningBalance * targetPercent) / 100;
-    const projectedEndUsd = projectedRunningBalance + targetProfitUsd;
+    const targetProfitUsd = Number(((projectedRunningBalance * targetPercent) / 100).toFixed(2));
+    const projectedEndUsd = Number((projectedRunningBalance + targetProfitUsd).toFixed(2));
 
     days.push({
       dayNumber: day,
@@ -78,46 +81,75 @@ export function recalculateDaysWithTrades(
     const dayTrades = trades.filter((t) => t.dayNumber === day.dayNumber);
     const dayProfit = dayTrades.reduce((acc, t) => acc + t.pnlUsd, 0);
 
-    const startBalanceUsd = day.dayNumber === 1 ? initialBalance : runningActualBalance;
-    const targetProfitUsd = (startBalanceUsd * day.targetPercent) / 100;
-    const projectedEndUsd = runningProjectedBalance * (1 + day.targetPercent / 100);
-    runningProjectedBalance = projectedEndUsd;
-
-    const actualEndUsd = Math.max(0, startBalanceUsd + dayProfit);
-    
-    // Status logic
+    let startBalanceUsd: number;
+    let targetProfitUsd: number;
+    let projectedEndUsd: number;
+    let actualEndUsd: number;
     let status: DayRecord['status'] = day.status;
-    if (day.isLocked) {
-      status = 'locked';
-    } else if (dayTrades.length > 0) {
-      if (dayProfit >= targetProfitUsd && targetProfitUsd > 0) {
-        status = 'target_hit';
-      } else if (dayProfit < 0) {
-        status = 'drawdown';
+
+    if (day.dayNumber < activeDay) {
+      // Past day: driven by actual trades or locked state
+      startBalanceUsd = day.dayNumber === 1 ? initialBalance : runningActualBalance;
+      targetProfitUsd = Number(((startBalanceUsd * day.targetPercent) / 100).toFixed(2));
+      actualEndUsd = Math.max(0, Number((startBalanceUsd + dayProfit).toFixed(2)));
+      projectedEndUsd = Number((startBalanceUsd + targetProfitUsd).toFixed(2));
+      runningActualBalance = dayTrades.length > 0 ? actualEndUsd : (day.isLocked ? day.actualEndUsd : startBalanceUsd);
+      runningProjectedBalance = runningActualBalance;
+
+      if (day.isLocked) {
+        status = 'locked';
+      } else if (dayTrades.length > 0) {
+        if (dayProfit >= targetProfitUsd && targetProfitUsd > 0) {
+          status = 'target_hit';
+        } else if (dayProfit < 0) {
+          status = 'drawdown';
+        } else {
+          status = 'in_progress';
+        }
+      }
+    } else if (day.dayNumber === activeDay) {
+      // Today: active trading day
+      startBalanceUsd = day.dayNumber === 1 ? initialBalance : runningActualBalance;
+      targetProfitUsd = Number(((startBalanceUsd * day.targetPercent) / 100).toFixed(2));
+      projectedEndUsd = Number((startBalanceUsd + targetProfitUsd).toFixed(2));
+      actualEndUsd = Math.max(0, Number((startBalanceUsd + dayProfit).toFixed(2)));
+      
+      // Update projected base for subsequent days
+      runningProjectedBalance = dayTrades.length > 0 && dayProfit >= targetProfitUsd ? actualEndUsd : projectedEndUsd;
+      runningActualBalance = actualEndUsd;
+
+      if (day.isLocked) {
+        status = 'locked';
+      } else if (dayTrades.length > 0) {
+        if (dayProfit >= targetProfitUsd && targetProfitUsd > 0) {
+          status = 'target_hit';
+        } else if (dayProfit < 0) {
+          status = 'drawdown';
+        } else {
+          status = 'in_progress';
+        }
       } else {
         status = 'in_progress';
       }
-    } else if (day.dayNumber === activeDay) {
-      status = 'in_progress';
-    } else if (day.dayNumber > activeDay) {
+    } else {
+      // Future day: mathematically compounded forward day-by-day
+      startBalanceUsd = Number(runningProjectedBalance.toFixed(2));
+      targetProfitUsd = Number(((startBalanceUsd * day.targetPercent) / 100).toFixed(2));
+      projectedEndUsd = Number((startBalanceUsd + targetProfitUsd).toFixed(2));
+      actualEndUsd = startBalanceUsd;
+      runningProjectedBalance = projectedEndUsd;
       status = 'pending';
     }
 
-    const updatedDay: DayRecord = {
+    return {
       ...day,
       startBalanceUsd,
       targetProfitUsd,
       projectedEndUsd,
       actualProfitUsd: dayProfit,
-      actualEndUsd: dayTrades.length > 0 ? actualEndUsd : startBalanceUsd,
+      actualEndUsd: (dayTrades.length > 0 || day.dayNumber < activeDay) ? actualEndUsd : startBalanceUsd,
       status
     };
-
-    if (dayTrades.length > 0 || day.dayNumber <= activeDay) {
-      runningActualBalance = actualEndUsd;
-    }
-
-    return updatedDay;
   });
 }
 

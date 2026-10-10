@@ -26,6 +26,7 @@ interface TradeLoggerProps {
   onOpenTradeModal: (dayNumber?: number) => void;
   onEditTrade: (trade: Trade) => void;
   onDeleteTrade: (tradeId: string) => void;
+  onOpenStatementImporter?: () => void;
 }
 
 export const TradeLogger: React.FC<TradeLoggerProps> = ({
@@ -35,6 +36,7 @@ export const TradeLogger: React.FC<TradeLoggerProps> = ({
   onOpenTradeModal,
   onEditTrade,
   onDeleteTrade,
+  onOpenStatementImporter,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [resultFilter, setResultFilter] = useState<'ALL' | 'WIN' | 'LOSS' | 'BREAKEVEN'>('ALL');
@@ -65,24 +67,51 @@ export const TradeLogger: React.FC<TradeLoggerProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              <span className={`flex items-center justify-center w-7 h-7 rounded-lg border ${
+                settings.propFirm.accountMode === 'funded'
+                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              }`}>
                 <Layers className="w-4 h-4" />
               </span>
-              <span>Trade Execution Journal</span>
+              <span>
+                {settings.propFirm.accountMode === 'funded' ? 'Prop Firm Execution Journal' : 'Trade Execution Journal'}
+              </span>
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Every trade recorded contributes directly to your 100-day compounding journey.
+              {settings.propFirm.accountMode === 'funded'
+                ? `Recording trades for ${settings.propFirm.propFirm} $${settings.propFirm.accountSize >= 1000 ? `${settings.propFirm.accountSize / 1000}K` : settings.propFirm.accountSize} Funded Desk with real-time drawdown tracking.`
+                : 'Every trade recorded contributes directly to your 100-day compounding journey.'
+              }
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onOpenTradeModal(settings.activeDay)}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Record New Trade</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenStatementImporter && (
+              <button
+                type="button"
+                onClick={onOpenStatementImporter}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer"
+                title="Import MT4/MT5 statement CSV or HTML"
+              >
+                <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Import MT4/MT5</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onOpenTradeModal(settings.activeDay)}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-950 shadow-lg transition-all cursor-pointer ${
+                settings.propFirm.accountMode === 'funded'
+                  ? 'bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 shadow-cyan-500/20'
+                  : 'bg-emerald-500 hover:bg-emerald-400 shadow-emerald-500/20'
+              }`}
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <span>Record New Trade</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter bar */}
@@ -280,10 +309,24 @@ export const TradeLogger: React.FC<TradeLoggerProps> = ({
                           href={t.screenshotUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline hover:text-cyan-300"
+                          className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline hover:text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40"
+                          title="View Entry Setup Chart (Before)"
                         >
-                          <Camera className="w-3 h-3" />
-                          <span>View Chart</span>
+                          <Camera className="w-3 h-3 text-cyan-400" />
+                          <span>Entry Setup</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                      {t.afterScreenshotUrl && (
+                        <a
+                          href={t.afterScreenshotUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-[11px] text-emerald-400 hover:underline hover:text-emerald-300 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40"
+                          title="View Exit Outcome Chart (After)"
+                        >
+                          <Camera className="w-3 h-3 text-emerald-400" />
+                          <span>Exit Outcome</span>
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       )}

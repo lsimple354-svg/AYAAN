@@ -24,6 +24,7 @@ interface HeroBannerProps {
   onLockActiveDay: () => void;
   onUnlockActiveDay: () => void;
   onAdvanceDay: () => void;
+  onToggleAccountMode?: () => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({
@@ -35,6 +36,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onLockActiveDay,
   onUnlockActiveDay,
   onAdvanceDay,
+  onToggleAccountMode,
 }) => {
   const currentDay = settings.activeDay;
   const startBal = activeDayRecord?.startBalanceUsd || settings.initialBalanceUsd;
@@ -147,6 +149,18 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
                 <span>{isLocked ? 'Trading Locked for Today' : 'Record New Trade'}</span>
               </button>
+
+              {onToggleAccountMode && (
+                <button
+                  type="button"
+                  onClick={onToggleAccountMode}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-md"
+                  title="Switch to PropFirms Platform (FTMO, FundingPips, FundedNext)"
+                >
+                  <Shield className="w-4 h-4 text-cyan-400" />
+                  <span>Switch to PropFirms ⇄</span>
+                </button>
+              )}
 
               {isLocked ? (
                 <div className="flex items-center gap-2">

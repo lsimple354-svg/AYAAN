@@ -1,5 +1,24 @@
 export type Currency = 'USD' | 'KES';
 
+export type AccountMode = 'funded' | 'compounding';
+
+export type PropFirmFirm = 'FundingPips' | 'FTMO' | 'FundedNext' | 'Alpha Capital' | 'The5ers' | 'Custom';
+export type PropFirmStage = 'phase1' | 'phase2' | 'funded';
+export type FundedAccountSize = 5000 | 10000 | 25000 | 50000 | 100000 | 200000;
+
+export interface PropFirmSettings {
+  accountMode: AccountMode;
+  propFirm: PropFirmFirm;
+  stage: PropFirmStage;
+  accountSize: number;
+  maxDailyLossPercent: number;
+  maxTotalLossPercent: number;
+  profitTargetPercent: number;
+  profitSplitPercent: number;
+  minTradingDays: number;
+  startingEquityUsd: number;
+}
+
 export type CompoundingPreset = 
   | 'stepped'      // 10% -> 15% -> 20% -> 30% -> 40% -> 50%
   | 'steady10'     // 10% daily
@@ -31,6 +50,7 @@ export interface Trade {
   emotion: string;
   notes: string;
   screenshotUrl?: string;
+  afterScreenshotUrl?: string;
 }
 
 export interface DayRecord {
@@ -56,4 +76,6 @@ export interface AppSettings {
   autoLockOnTarget: boolean;
   preset: CompoundingPreset;
   nextSessionTime?: string; // ISO string
+  propFirm: PropFirmSettings;
 }
+

@@ -90,6 +90,7 @@ export const TradeModal: React.FC<TradeModalProps> = ({
   const [emotion, setEmotion] = useState<string>('Disciplined & Calm');
   const [notes, setNotes] = useState<string>('');
   const [screenshotUrl, setScreenshotUrl] = useState<string>('');
+  const [afterScreenshotUrl, setAfterScreenshotUrl] = useState<string>('');
 
   useEffect(() => {
     if (tradeToEdit) {
@@ -112,9 +113,12 @@ export const TradeModal: React.FC<TradeModalProps> = ({
       setEmotion(tradeToEdit.emotion);
       setNotes(tradeToEdit.notes);
       setScreenshotUrl(tradeToEdit.screenshotUrl || '');
+      setAfterScreenshotUrl(tradeToEdit.afterScreenshotUrl || '');
     } else {
       setDayNumber(initialDayNumber);
       setPnlInputCurrency(currency);
+      setScreenshotUrl('');
+      setAfterScreenshotUrl('');
       // default sensible target
       const targetUsd = dayRecord ? dayRecord.targetProfitUsd : 1.0;
       const initialPnl = pnlInputCurrency === 'KES' 
@@ -167,7 +171,8 @@ export const TradeModal: React.FC<TradeModalProps> = ({
       session,
       emotion,
       notes,
-      screenshotUrl: screenshotUrl || undefined
+      screenshotUrl: screenshotUrl || undefined,
+      afterScreenshotUrl: afterScreenshotUrl || undefined,
     });
     onClose();
   };
@@ -202,16 +207,35 @@ export const TradeModal: React.FC<TradeModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           
+          {/* Active Platform Badge */}
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span>Active Platform Account:</span>
+            </span>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${
+              settings.propFirm.accountMode === 'funded'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+            }`}>
+              {settings.propFirm.accountMode === 'funded' 
+                ? `🛡️ ${settings.propFirm.propFirm} $${settings.propFirm.accountSize >= 1000 ? `${settings.propFirm.accountSize / 1000}K` : settings.propFirm.accountSize} Account`
+                : '🌱 $10 (KES 1,300) Compounding Challenge'
+              }
+            </span>
+          </div>
+
           {/* Day selection & Asset */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Challenge Day # (1-100)
+                {settings.propFirm.accountMode === 'funded' ? 'Funded Trading Session Day #' : 'Challenge Day # (1-100)'}
               </label>
               <select
                 value={dayNumber}
                 onChange={(e) => setDayNumber(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-emerald-500"
+                className={`w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none ${
+                  settings.propFirm.accountMode === 'funded' ? 'focus:border-cyan-500' : 'focus:border-emerald-500'
+                }`}
               >
                 {Array.from({ length: 100 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>
@@ -491,17 +515,34 @@ export const TradeModal: React.FC<TradeModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Chart Screenshot Link (TradingView / Lightshot / Imgur)
-            </label>
-            <input
-              type="url"
-              value={screenshotUrl}
-              onChange={(e) => setScreenshotUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Entry Setup Chart (Before)</span>
+              </label>
+              <input
+                type="url"
+                value={screenshotUrl}
+                onChange={(e) => setScreenshotUrl(e.target.value)}
+                placeholder="https://tradingview.com/x/..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Exit Outcome Chart (After)</span>
+              </label>
+              <input
+                type="url"
+                value={afterScreenshotUrl}
+                onChange={(e) => setAfterScreenshotUrl(e.target.value)}
+                placeholder="https://tradingview.com/x/..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
           </div>
 
           {/* Footer actions */}

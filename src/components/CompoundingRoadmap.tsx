@@ -124,6 +124,21 @@ export const CompoundingRoadmap: React.FC<CompoundingRoadmapProps> = ({
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/80">
           <button
             type="button"
+            onClick={() => onApplyPreset('steady15')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              settings.preset === 'steady15'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-lg shadow-emerald-500/30 border border-emerald-400 ring-1 ring-emerald-400/40'
+                : 'bg-slate-800/90 text-emerald-300 hover:bg-slate-800 border border-emerald-600/40'
+            }`}
+            title="Formula: $10.00 -> $11.50 (+15%) -> $13.23 (+15%) onwards"
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Steady 15% ($10 → $11.50 → $13.23 Formula)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 font-mono">RECOMMENDED</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => onApplyPreset('stepped')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               settings.preset === 'stepped'
@@ -144,18 +159,6 @@ export const CompoundingRoadmap: React.FC<CompoundingRoadmapProps> = ({
             }`}
           >
             Steady 10%
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onApplyPreset('steady15')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              settings.preset === 'steady15'
-                ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                : 'bg-slate-800/90 text-slate-300 hover:bg-slate-800 border border-slate-700/60'
-            }`}
-          >
-            Steady 15%
           </button>
 
           <button
@@ -307,11 +310,19 @@ export const CompoundingRoadmap: React.FC<CompoundingRoadmapProps> = ({
 
       {/* The 100-Day Interactive Compounding Table */}
       <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/80 shadow-2xl">
+        {/* Mobile horizontal scroll guidance */}
+        <div className="sm:hidden flex items-center justify-between px-3.5 py-2 bg-slate-900/90 border-b border-slate-800/80 text-[11px] text-slate-400">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span>Swipe horizontally to view all columns</span>
+          </span>
+          <span className="font-mono text-emerald-300 font-bold">100 Days</span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs sm:text-sm">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase text-[11px] font-semibold tracking-wider font-mono">
-                <th className="py-3 px-3 sm:px-4">Day #</th>
+                <th className="py-3 px-3 sm:px-4 sticky left-0 bg-slate-900/95 sm:static sm:bg-transparent z-10">Day #</th>
                 <th className="py-3 px-3 sm:px-4">Initial Balance</th>
                 <th className="py-3 px-3 sm:px-4 text-center">Daily Target %</th>
                 <th className="py-3 px-3 sm:px-4">Daily Profit Goal</th>
@@ -349,8 +360,8 @@ export const CompoundingRoadmap: React.FC<CompoundingRoadmapProps> = ({
                           : ''
                       }`}
                     >
-                      {/* Day Number */}
-                      <td className="py-3 px-3 sm:px-4 font-bold text-white whitespace-nowrap">
+                      {/* Day Number (Sticky on mobile) */}
+                      <td className="py-3 px-3 sm:px-4 font-bold text-white whitespace-nowrap sticky left-0 bg-slate-950/95 sm:static sm:bg-transparent z-10">
                         <div className="flex items-center gap-2">
                           <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-black ${
                             isActive
