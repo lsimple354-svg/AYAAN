@@ -20,6 +20,7 @@ import { TradingRulesModal } from './components/TradingRulesModal';
 import { EconomicCalendar } from './components/EconomicCalendar';
 import { StatementImporterModal } from './components/StatementImporterModal';
 import { PreSessionChecklistModal } from './components/PreSessionChecklistModal';
+import { DashboardView } from './components/DashboardView';
 import { 
   Currency, 
   CompoundingPreset, 
@@ -54,7 +55,7 @@ export default function App() {
   const [days, setDays] = useState<DayRecord[]>(() => loadDays(settings, trades));
   
   const [activeTab, setActiveTab] = useState<AppTab>(
-    settings.propFirm.accountMode === 'funded' ? 'funded' : 'roadmap'
+    settings.propFirm.accountMode === 'funded' ? 'funded' : 'dashboard'
   );
 
   // Toast notification on platform switch
@@ -120,7 +121,7 @@ export default function App() {
         mode: 'funded'
       });
     } else {
-      setActiveTab('roadmap');
+      setActiveTab('dashboard');
       setSwitchToast({
         message: '🌱 Switched to Daily Compounding Platform',
         sub: `100-Day $10 (KES 1,300) Seed Challenge • Day ${settings.activeDay}/100`,
@@ -145,7 +146,7 @@ export default function App() {
         sub: `${updatedProp.propFirm} $${updatedProp.accountSize >= 1000 ? `${updatedProp.accountSize / 1000}K` : updatedProp.accountSize} Trading Desk`,
         mode: 'funded'
       });
-    } else if ((tab === 'roadmap' || tab === 'calendar') && settings.propFirm.accountMode !== 'compounding') {
+    } else if ((tab === 'roadmap' || tab === 'calendar' || tab === 'dashboard') && settings.propFirm.accountMode !== 'compounding') {
       const updatedProp: PropFirmSettings = { ...settings.propFirm, accountMode: 'compounding' };
       const updatedSettings = { ...settings, propFirm: updatedProp };
       setSettings(updatedSettings);
@@ -518,8 +519,8 @@ export default function App() {
           </div>
         </div>
 
-        {/* Hero Banner with Trading Terminal Aesthetics (shown ONLY in Daily Compounding platform, never in PropFirms mode) */}
-        {settings.propFirm.accountMode === 'compounding' && activeTab !== 'news' && (
+        {/* Hero Banner with Trading Terminal Aesthetics (shown in Compounding mode on roadmap/calendar/journal tabs) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab !== 'news' && activeTab !== 'dashboard' && (
           <HeroBanner
             currency={currency}
             settings={settings}
@@ -530,6 +531,36 @@ export default function App() {
             onUnlockActiveDay={() => handleUnlockDay(settings.activeDay)}
             onAdvanceDay={handleAdvanceDay}
             onToggleAccountMode={handleToggleAccountMode}
+          />
+        )}
+
+        {/* Tab: AdamsKering Trader Signature Dashboard View (Compounding Mode) */}
+        {settings.propFirm.accountMode === 'compounding' && activeTab === 'dashboard' && (
+          <DashboardView
+            settings={settings}
+            currency={currency}
+            trades={trades}
+            dayRecords={days}
+            startingBalanceUsd={settings.initialBalanceUsd || 10}
+            onAddTrade={() => handleOpenTradeModal(settings.activeDay)}
+            onEditTrade={handleEditTrade}
+            onDeleteTrade={handleDeleteTrade}
+            onUpdateSettings={(newSettings) => {
+              setSettings(newSettings);
+              saveSettings(newSettings);
+              const fresh = generateInitialDays(newSettings.initialBalanceUsd, newSettings.preset);
+              const recalculated = recalculateDaysWithTrades(fresh, trades, newSettings.initialBalanceUsd, newSettings.activeDay);
+              setDays(recalculated);
+              saveDays(recalculated);
+            }}
+            onEnableNotifications={() => {
+              soundManager.playTargetHit();
+              setSwitchToast({
+                message: '🔔 Trade Reminders Activated',
+                sub: 'Session notifications active for London Open (10:00 AM EAT) and NY Open (3:30 PM EAT).',
+                mode: 'compounding'
+              });
+            }}
           />
         )}
 

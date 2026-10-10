@@ -1,12 +1,21 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sora: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
 @layer base {
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Sora', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     color: #e2e8f0;
     background-color: #070a11;
   }
   
+  .font-sora {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }

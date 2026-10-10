@@ -11,22 +11,23 @@ import {
   BookOpen, 
   BarChart3, 
   Calendar, 
-  ListFilter,
-  ShieldCheck,
-  Flame,
-  Activity,
-  Calculator,
-  GraduationCap,
-  CheckSquare,
-  Upload,
-  ArrowLeftRight
+  ListFilter, 
+  ShieldCheck, 
+  Flame, 
+  Activity, 
+  Calculator, 
+  GraduationCap, 
+  CheckSquare, 
+  Upload, 
+  ArrowLeftRight,
+  Target
 } from 'lucide-react';
 import { Currency, AppSettings, DayRecord } from '../types/trading';
 import { formatCurrency } from '../utils/compounding';
 import { soundManager } from '../utils/audio';
 import { PWAInstallButton } from './PWAInstallButton';
 
-export type AppTab = 'funded' | 'roadmap' | 'calendar' | 'news' | 'academy' | 'sizer' | 'trades' | 'discipline';
+export type AppTab = 'dashboard' | 'funded' | 'roadmap' | 'calendar' | 'news' | 'academy' | 'sizer' | 'trades' | 'discipline';
 
 interface NavbarProps {
   currency: Currency;
@@ -419,6 +420,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                DAILY COMPOUNDING PLATFORM TABS (No Prop Firm Desk Visible)
                ============================================================== */
             <>
+              {/* AdamsKering Trader Dashboard Tab */}
+              <button
+                onClick={() => onTabChange('dashboard')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === 'dashboard'
+                    ? 'bg-amber-500/20 text-[#d9a441] border border-[#d9a441]/60 shadow-sm font-bold ring-1 ring-[#d9a441]/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Target className="w-4 h-4 text-[#d9a441]" />
+                <span className="flex items-center gap-1">
+                  <span>Dashboard</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d9a441] animate-pulse" />
+                </span>
+              </button>
+
               {/* 100-Day Roadmap Tab */}
               <button
                 onClick={() => onTabChange('roadmap')}
